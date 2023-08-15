@@ -96,7 +96,7 @@ def _check_field_annotations(cls: Type):
             raise MissingFieldAnnotationError(field_name, cls)
 
 
-def _wrap_dataclass(cls: Type):
+def _wrap_dataclass(cls: Type, skip_wrapping: bool = False):
     """Wrap a strawberry.type class with a dataclass and check for any issues
     before doing so"""
 
@@ -112,7 +112,10 @@ def _wrap_dataclass(cls: Type):
     else:
         dclass_kwargs["init"] = False
 
-    dclass = dataclasses.dataclass(cls, **dclass_kwargs)
+    if skip_wrapping:
+        dclass = cls
+    else:
+        dclass = dataclasses.dataclass(cls, **dclass_kwargs)
 
     if sys.version_info < (3, 10):
         add_custom_init_fn(dclass)
@@ -218,6 +221,7 @@ def type(
     description: Optional[str] = None,
     directives: Optional[Sequence[object]] = (),
     extend: bool = False,
+    skip_dataclass_wrapping: bool = False,
 ) -> Union[T, Callable[[T], T]]:
     """Annotates a class as a GraphQL type.
 
@@ -238,7 +242,7 @@ def type(
                 exc = ObjectIsNotClassError.type
             raise exc(cls)
 
-        wrapped = _wrap_dataclass(cls)
+        wrapped = _wrap_dataclass(cls, skip_dataclass_wrapping)
         return _process_type(
             wrapped,
             name=name,
